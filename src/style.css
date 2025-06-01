@@ -3,20 +3,61 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  width: 100vw;
+  height: 100vh;
 }
+
 #webcamVideo {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
   object-fit: cover;
   z-index: 0;
+  /* Mirror the video horizontally for natural hand gesture interaction */
+  transform: scaleX(-1);
 }
+
+#phaserContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+}
+
 #phaserContainer > canvas {
   position: absolute;
   top: 0;
   left: 0;
   z-index: 1;
   background: transparent;
+  /* Ensure the canvas covers the full area */
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Add a subtle overlay to make game elements more visible */
+#phaserContainer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.2) 70%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Ensure proper stacking order */
+#phaserContainer canvas {
+  z-index: 2 !important;
 }

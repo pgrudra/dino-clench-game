@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { getClenchState, startHandTracking } from "../gesture/handTracker.js";
+import { getClenchState, startHandTracking, isModelReady } from "../gesture/handTracker.js";
 
 export default class PlayScene extends Phaser.Scene {
   constructor() {
@@ -13,6 +13,9 @@ export default class PlayScene extends Phaser.Scene {
     this.isGameOver = false;
     this.groundHeight = 568;
     this.lastFistState = false;
+    this.isHandTrackingReady = false;
+    this.countdownTimer = null;
+    this.instructionsText = null;
     
     // Enhanced difficulty progression variables
     this.gameStartTime = 0;
@@ -33,6 +36,9 @@ export default class PlayScene extends Phaser.Scene {
   create() {
     // Record game start time for time-based difficulty
     this.gameStartTime = this.time.now;
+    
+    // Show instructions and start countdown
+    this.showInstructionsAndCountdown();
     
     // 1. Start Hand Tracking
     startHandTracking();
@@ -104,8 +110,69 @@ export default class PlayScene extends Phaser.Scene {
     this.speedText.setScrollFactor(0);
   }
 
+  showInstructionsAndCountdown() {
+    // Create instructions text
+    this.instructionsText = this.add.text(400, 200, 
+      "Welcome to Dino Clench Runner!\n\n" +
+      "Instructions:\n" +
+      "• Make a fist to make the dino jump\n" +
+      "• Avoid obstacles\n\n" +
+      
+      "Waiting for hand tracking to initialize...", {
+      fontSize: "20px",
+      fill: "#000",
+      align: "center",
+      lineSpacing: 10
+    });
+    this.instructionsText.setOrigin(0.5);
+    this.instructionsText.setScrollFactor(0);
+
+    // Create countdown text
+    this.countdownText = this.add.text(400, 400, "3", {
+      fontSize: "64px",
+      fill: "#ff0000",
+      fontStyle: "bold"
+    });
+    this.countdownText.setOrigin(0.5);
+    this.countdownText.setScrollFactor(0);
+    this.countdownText.setVisible(false);
+
+    // Start checking for hand tracking readiness
+    this.checkHandTrackingReady();
+  }
+
+  checkHandTrackingReady() {
+    if (isModelReady()) {
+      this.startCountdown();
+    } else {
+      this.time.delayedCall(100, () => this.checkHandTrackingReady());
+    }
+  }
+
+  startCountdown() {
+    let count = 3;
+    this.countdownText.setVisible(true);
+    
+    const updateCountdown = () => {
+      if (count > 0) {
+        this.countdownText.setText(count.toString());
+        count--;
+        this.time.delayedCall(1000, updateCountdown);
+      } else {
+        this.countdownText.setText("GO!");
+        this.time.delayedCall(1000, () => {
+          this.countdownText.destroy();
+          this.instructionsText.destroy();
+          this.isHandTrackingReady = true;
+        });
+      }
+    };
+    
+    updateCountdown();
+  }
+
   update(time, delta) {
-    if (this.isGameOver) return;
+    if (this.isGameOver || !this.isHandTrackingReady) return;
 
     // Update difficulty based on time elapsed and score
     this.updateDifficulty(time);

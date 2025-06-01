@@ -5,20 +5,35 @@ export default class PlayScene extends Phaser.Scene {
   constructor() {
     super("PlayScene");
     this.lastJumpTime = 0;
+    this.baseGameSpeed = 300;
     this.gameSpeed = 300;
     this.spawnTimer = 0;
     this.score = 0;
     this.scoreText = null;
     this.isGameOver = false;
     this.groundHeight = 568;
-    this.lastFistState = false; // Track previous fist state for edge detection
+    this.lastFistState = false;
+    
+    // Enhanced difficulty progression variables
+    this.gameStartTime = 0;
+    this.baseSpawnInterval = 2000;
+    this.spawnInterval = 2000;
+    this.difficultyLevel = 1;
+    this.maxGameSpeed = 800; // Maximum speed cap
+    this.speedIncreaseRate = 2; // How much speed increases per obstacle
+    this.minSpawnInterval = 800; // Minimum time between obstacles
+    this.maxSpeedReached = 300; // Track highest speed achieved
     
     // Store references to game over UI elements
     this.gameOverText = null;
     this.restartText = null;
+    this.difficultyText = null;
   }
 
   create() {
+    // Record game start time for time-based difficulty
+    this.gameStartTime = this.time.now;
+    
     // 1. Start Hand Tracking
     startHandTracking();
 
@@ -35,7 +50,7 @@ export default class PlayScene extends Phaser.Scene {
 
     // 3. Dino Player - Adjusted size and position
     this.player = this.physics.add.sprite(100, this.groundHeight - 60, "dinoRun1");
-    this.player.setScale(0.3); // Reduced scale for better proportion
+    this.player.setScale(0.3);
     this.player.setActive(true);
     this.player.setVisible(true);
     this.player.setDepth(1);
@@ -73,12 +88,27 @@ export default class PlayScene extends Phaser.Scene {
     });
     this.gestureText.setScrollFactor(0);
 
-    // 9. Spawn first obstacle after 2 seconds
-    this.spawnInterval = 2000; // ms
+    // 9. Difficulty level display
+    this.difficultyText = this.add.text(16, 90, "Level: 1", {
+      fontSize: "20px",
+      fill: "#333",
+      fontStyle: "bold"
+    });
+    this.difficultyText.setScrollFactor(0);
+
+    // 10. Speed display for debugging
+    this.speedText = this.add.text(16, 120, "Speed: 300", {
+      fontSize: "16px",
+      fill: "#999"
+    });
+    this.speedText.setScrollFactor(0);
   }
 
   update(time, delta) {
     if (this.isGameOver) return;
+
+    // Update difficulty based on time elapsed and score
+    this.updateDifficulty(time);
 
     // 1. Handle Jump (space OR hand clench)
     const isFist = getClenchState();
@@ -107,12 +137,17 @@ export default class PlayScene extends Phaser.Scene {
     const fistJustClenched = currentFistState && !this.lastFistState;
     this.lastFistState = currentFistState;
     
+    // Adjust jump cooldown based on difficulty (faster reactions needed at higher levels)
+    const jumpCooldown = Math.max(200, 400 - (this.difficultyLevel * 20));
+    
     if (
       (fistJustClenched || Phaser.Input.Keyboard.JustDown(this.spaceKey)) &&
       onGround &&
-      time - this.lastJumpTime > 300
+      time - this.lastJumpTime > jumpCooldown
     ) {
-      this.player.setVelocityY(-450); // Increased jump power
+      // Jump power increases slightly with difficulty for better obstacle clearing
+      const jumpPower = Math.min(-550, -450 - (this.difficultyLevel * 5));
+      this.player.setVelocityY(jumpPower);
       this.sound.play("jumpSfx");
       this.lastJumpTime = time;
     }
@@ -127,14 +162,18 @@ export default class PlayScene extends Phaser.Scene {
       }
     });
 
-    // 3. Spawn obstacles
+    // 3. Spawn obstacles with dynamic difficulty
     this.spawnTimer += delta;
     if (this.spawnTimer >= this.spawnInterval) {
       this.spawnObstacle();
       this.spawnTimer = 0;
-      // Gradually increase speed / decrease spawn interval
-      this.gameSpeed += 1;
-      this.spawnInterval = Math.max(1000, this.spawnInterval - 5);
+      
+      // Increase speed more aggressively
+      this.gameSpeed = Math.min(this.maxGameSpeed, this.gameSpeed + this.speedIncreaseRate);
+      
+      // Decrease spawn interval more aggressively at higher difficulties
+      const spawnReduction = Math.max(10, 5 + this.difficultyLevel);
+      this.spawnInterval = Math.max(this.minSpawnInterval, this.spawnInterval - spawnReduction);
     }
 
     // 4. Move obstacles left
@@ -143,67 +182,123 @@ export default class PlayScene extends Phaser.Scene {
       // Destroy off-screen obstacles
       if (obs.x < -100) {
         obs.destroy();
-        this.score += 10;
+        // Increase score based on difficulty level
+        const scoreIncrease = 10 + (this.difficultyLevel * 2);
+        this.score += scoreIncrease;
         this.scoreText.setText("Score: " + this.score);
         this.sound.play("pointSfx");
       }
     });
+
+    // Update debug displays
+    this.speedText.setText(`Speed: ${Math.round(this.gameSpeed)}`);
+    // Update max speed reached
+    this.maxSpeedReached = Math.max(this.maxSpeedReached, this.gameSpeed);
+  }
+
+  updateDifficulty(currentTime) {
+    const timeElapsed = (currentTime - this.gameStartTime) / 1000; // seconds
+    
+    // Calculate difficulty level based on time and score
+    const timeDifficulty = Math.floor(timeElapsed / 10); // Every 10 seconds
+    const scoreDifficulty = Math.floor(this.score / 100); // Every 100 points
+    
+    const newDifficultyLevel = Math.max(1, timeDifficulty + scoreDifficulty);
+    
+    if (newDifficultyLevel > this.difficultyLevel) {
+      this.difficultyLevel = newDifficultyLevel;
+      
+      // Apply difficulty bonuses
+      this.applyDifficultyBonus();
+      
+      // Update difficulty display
+      this.difficultyText.setText(`Level: ${this.difficultyLevel}`);
+      
+      console.log(`Difficulty increased to level ${this.difficultyLevel}`);
+    }
+  }
+
+  applyDifficultyBonus() {
+    // Increase maximum speed cap as difficulty increases
+    this.maxGameSpeed = 800 + (this.difficultyLevel * 50);
+    
+    // Increase speed increase rate
+    this.speedIncreaseRate = 2 + Math.floor(this.difficultyLevel / 3);
+    
+    // Decrease minimum spawn interval (more obstacles)
+    this.minSpawnInterval = Math.max(500, 800 - (this.difficultyLevel * 30));
+    
+    // Every 5 difficulty levels, add an immediate speed boost
+    if (this.difficultyLevel % 5 === 0) {
+      this.gameSpeed = Math.min(this.maxGameSpeed, this.gameSpeed + 100);
+      this.spawnInterval = Math.max(this.minSpawnInterval, this.spawnInterval * 0.8);
+    }
   }
 
   spawnObstacle() {
-    // Randomly choose small cactus, large cactus, or ptero
-    const rand = Phaser.Math.Between(0, 2);
+    // At higher difficulties, increase chance of flying obstacles and multiple obstacles
+    let obstacleCount = 1;
+    
+    // Chance for multiple obstacles at higher difficulties
+    if (this.difficultyLevel >= 5 && Math.random() < 0.3) {
+      obstacleCount = 2;
+    }
+    if (this.difficultyLevel >= 10 && Math.random() < 0.2) {
+      obstacleCount = 3;
+    }
+    
+    for (let i = 0; i < obstacleCount; i++) {
+      this.createSingleObstacle(i * 100); // Offset multiple obstacles
+    }
+  }
+  
+  createSingleObstacle(xOffset = 0) {
+    // Adjust obstacle probabilities based on difficulty
+    let rand;
+    if (this.difficultyLevel < 3) {
+      // Early game: mostly ground obstacles
+      rand = Phaser.Math.Between(0, 1);
+    } else if (this.difficultyLevel < 7) {
+      // Mid game: introduce more flying obstacles
+      rand = Phaser.Math.Between(0, 2);
+    } else {
+      // Late game: higher chance of flying obstacles
+      rand = Phaser.Math.FloatBetween(0, 3);
+      if (rand > 2.5) rand = 2; // Increase ptero chance
+    }
+    
     let key, yPos, scale = 1;
     
-    if (rand === 0) {
+    if (rand <= 0.5) {
       key = "cactusSmall";
       yPos = this.groundHeight - 45;
       scale = 0.8;
-    } else if (rand === 1) {
+    } else if (rand <= 1.5) {
       key = "cactusLarge";
       yPos = this.groundHeight - 45;
       scale = 0.7;
     } else {
       key = "ptero";
-      yPos = this.groundHeight - 140;
+      // Vary ptero height at higher difficulties
+      const heightVariations = [120, 140, 160];
+      const heightIndex = Math.floor(Math.random() * heightVariations.length);
+      yPos = this.groundHeight - heightVariations[heightIndex];
       scale = 0.6;
     }
     
-    const obstacle = this.obstacles.create(900, yPos, key);
+    const obstacle = this.obstacles.create(900 + xOffset, yPos, key);
     obstacle.setScale(scale);
     obstacle.setImmovable();
     obstacle.body.allowGravity = false;
     
-    // Debug log for obstacle creation
-    console.log(`Spawned ${key} at position:`, {
-      x: obstacle.x,
-      y: obstacle.y,
-      scale: scale,
-      type: key
-    });
-    
-    // FIXED: Proper hitbox calculation for scaled sprites
-    // When sprites are scaled, physics bodies are scaled too, so we need to compensate
+    // Adjust hitboxes (keeping your existing logic)
     if (key === "cactusSmall") {
-      // Hitbox for small cactus (scale = 0.8)
       obstacle.setSize(60 / scale, 75 / scale).setOffset(15 / scale, 0);
     } else if (key === "cactusLarge") {
-      // Hitbox for large cactus (scale = 0.7)
       obstacle.setSize(70 / scale, 100 / scale).setOffset(15 / scale, 0);
     } else {
-      // FIXED: Proper hitbox for ptero (scale = 0.6)
-      // Make hitbox bigger but position it higher to avoid ground collision
       obstacle.setSize(70 / scale, 45 / scale).setOffset(15 / scale, 5 / scale);
     }
-  
-    // Log hitbox details for debugging
-    console.log(`${key} hitbox:`, {
-      width: obstacle.body.width,
-      height: obstacle.body.height,
-      offsetX: obstacle.body.offset.x,
-      offsetY: obstacle.body.offset.y,
-      bounds: obstacle.getBounds()
-    });
   }
 
   gameOver() {
@@ -225,7 +320,10 @@ export default class PlayScene extends Phaser.Scene {
         x: collidingObstacle.x,
         y: collidingObstacle.y,
         bounds: collidingObstacle.getBounds()
-      } : null
+      } : null,
+      finalScore: this.score,
+      difficultyLevel: this.difficultyLevel,
+      finalSpeed: this.gameSpeed
     });
     
     this.isGameOver = true;
@@ -238,8 +336,8 @@ export default class PlayScene extends Phaser.Scene {
     // Play death animation
     this.player.play('dinoDead');
     
-    // Store references to game over UI elements
-    this.gameOverText = this.add.text(400, 250, "GAME OVER", {
+    // Enhanced game over screen with stats
+    this.gameOverText = this.add.text(400, 200, "GAME OVER", {
       fontSize: "48px",
       fill: "#ff0000",
       fontStyle: "bold"
@@ -247,12 +345,25 @@ export default class PlayScene extends Phaser.Scene {
     this.gameOverText.setOrigin(0.5);
     this.gameOverText.setScrollFactor(0);
     
-    this.restartText = this.add.text(400, 320, "Make a fist or press SPACE to restart", {
+    // Show final stats
+    const statsText = this.add.text(400, 260, 
+      `Final Score: ${this.score}\nDifficulty Level: ${this.difficultyLevel}\nMax Speed: ${Math.round(this.maxSpeedReached)}`, {
+      fontSize: "20px",
+      fill: "#333",
+      align: "center"
+    });
+    statsText.setOrigin(0.5);
+    statsText.setScrollFactor(0);
+    
+    this.restartText = this.add.text(400, 340, "Make a fist or press SPACE to restart", {
       fontSize: "24px",
       fill: "#000"
     });
     this.restartText.setOrigin(0.5);
     this.restartText.setScrollFactor(0);
+    
+    // Store reference to stats text for cleanup
+    this.statsText = statsText;
     
     // Wait for death animation to complete, then allow restart
     this.time.delayedCall(1500, () => {
@@ -270,7 +381,7 @@ export default class PlayScene extends Phaser.Scene {
       lastRestartFistState = currentFistState;
       
       if (fistJustClenched || Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
-        // Properly destroy game over UI elements using stored references
+        // Properly destroy game over UI elements
         if (this.gameOverText && this.gameOverText.active) {
           this.gameOverText.destroy();
           this.gameOverText = null;
@@ -278,6 +389,10 @@ export default class PlayScene extends Phaser.Scene {
         if (this.restartText && this.restartText.active) {
           this.restartText.destroy();
           this.restartText = null;
+        }
+        if (this.statsText && this.statsText.active) {
+          this.statsText.destroy();
+          this.statsText = null;
         }
         
         // Clear all existing obstacles
@@ -293,16 +408,24 @@ export default class PlayScene extends Phaser.Scene {
         this.player.setVelocity(0, 0);
         this.player.play('dinoRun');
         
-        // Reset game state variables
+        // Reset all game state variables
         this.isGameOver = false;
-        this.gameSpeed = 300;
+        this.gameSpeed = this.baseGameSpeed;
         this.spawnTimer = 0;
         this.score = 0;
-        this.spawnInterval = 2000;
+        this.spawnInterval = this.baseSpawnInterval;
         this.lastFistState = false;
+        this.difficultyLevel = 1;
+        this.gameStartTime = this.time.now;
+        this.maxGameSpeed = 800;
+        this.speedIncreaseRate = 2;
+        this.minSpawnInterval = 800;
+        this.maxSpeedReached = 300; // Reset max speed reached
         
-        // Update score display
+        // Update all displays
         this.scoreText.setText("Score: 0");
+        this.difficultyText.setText("Level: 1");
+        this.speedText.setText("Speed: 300");
         
         // Stop checking for restart input
         return;

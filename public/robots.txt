@@ -1,0 +1,19 @@
+# Allow all web crawlers to index the game
+User-agent: *
+Allow: /
+
+# Disallow access to any potential admin or backend areas
+Disallow: /admin/
+Disallow: /backend/
+Disallow: /api/
+
+# Allow crawling of game assets
+Allow: /*.html
+Allow: /*.js
+Allow: /*.css
+Allow: /*.png
+Allow: /*.jpg
+Allow: /*.svg
+
+# Sitemap location (if you decide to add one in the future)
+# Sitemap: https://yourgamedomain.com/sitemap.xml

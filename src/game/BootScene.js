@@ -65,78 +65,88 @@ export default class BootScene extends Phaser.Scene {
   constructor() {
     super("BootScene");
   }
-  preload() {
-    // Load dino animation frames
-    this.load.image("dinoRun1", dinoRun1);
-    this.load.image("dinoRun2", dinoRun2);
-    this.load.image("dinoRun3", dinoRun3);
-    this.load.image("dinoRun4", dinoRun4);
-    this.load.image("dinoRun5", dinoRun5);
-    this.load.image("dinoRun6", dinoRun6);
-    this.load.image("dinoRun7", dinoRun7);
-    this.load.image("dinoRun8", dinoRun8);
 
-    this.load.image("dinoWalk1", dinoWalk1);
-    this.load.image("dinoWalk2", dinoWalk2);
-    this.load.image("dinoWalk3", dinoWalk3);
-    this.load.image("dinoWalk4", dinoWalk4);
-    this.load.image("dinoWalk5", dinoWalk5);
-    this.load.image("dinoWalk6", dinoWalk6);
-    this.load.image("dinoWalk7", dinoWalk7);
-    this.load.image("dinoWalk8", dinoWalk8);
-    this.load.image("dinoWalk9", dinoWalk9);
-    this.load.image("dinoWalk10", dinoWalk10);
-
-    this.load.image("dinoJump1", dinoJump1);
-    this.load.image("dinoJump2", dinoJump2);
-    this.load.image("dinoJump3", dinoJump3);
-    this.load.image("dinoJump4", dinoJump4);
-    this.load.image("dinoJump5", dinoJump5);
-    this.load.image("dinoJump6", dinoJump6);
-    this.load.image("dinoJump7", dinoJump7);
-    this.load.image("dinoJump8", dinoJump8);
-    this.load.image("dinoJump9", dinoJump9);
-    this.load.image("dinoJump10", dinoJump10);
-    this.load.image("dinoJump11", dinoJump11);
-    this.load.image("dinoJump12", dinoJump12);
-
-    this.load.image("dinoIdle1", dinoIdle1);
-    this.load.image("dinoIdle2", dinoIdle2);
-    this.load.image("dinoIdle3", dinoIdle3);
-    this.load.image("dinoIdle4", dinoIdle4);
-    this.load.image("dinoIdle5", dinoIdle5);
-    this.load.image("dinoIdle6", dinoIdle6);
-    this.load.image("dinoIdle7", dinoIdle7);
-    this.load.image("dinoIdle8", dinoIdle8);
-    this.load.image("dinoIdle9", dinoIdle9);
-    this.load.image("dinoIdle10", dinoIdle10);
-
-    this.load.image("dinoDead1", dinoDead1);
-    this.load.image("dinoDead2", dinoDead2);
-    this.load.image("dinoDead3", dinoDead3);
-    this.load.image("dinoDead4", dinoDead4);
-    this.load.image("dinoDead5", dinoDead5);
-    this.load.image("dinoDead6", dinoDead6);
-    this.load.image("dinoDead7", dinoDead7);
-    this.load.image("dinoDead8", dinoDead8);
-    
-    this.load.image("ground", groundImage);
-    this.load.image("cactusSmall", cactusSmallImage);
-    this.load.image("cactusLarge", cactusLargeImage);
-    this.load.image("ptero", pteroImage);
-    // Audio
-    this.load.audio("jumpSfx", jumpSound);
-    this.load.audio("pointSfx", pointSound);
-    this.load.audio("hitSfx", hitSound);
-  }
   create() {
-    // Create animations
-    this.createDinoAnimations();
-    this.scene.start("PlayScene");
+    // Create loading spinner
+    const loadingContainer = document.createElement('div');
+    loadingContainer.className = 'loading-container';
+    loadingContainer.innerHTML = `
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading game assets...</div>
+    `;
+    document.body.appendChild(loadingContainer);
+
+    // Load all assets
+    this.loadAssets().then(() => {
+      // Remove loading spinner after assets are loaded
+      loadingContainer.remove();
+      // Start the play scene
+      this.scene.start("PlayScene");
+    });
   }
 
-  createDinoAnimations() {
-    // Run animation
+  async loadAssets() {
+    return new Promise((resolve) => {
+      // Load dino animation frames
+      this.load.image("dinoRun1", dinoRun1);
+      this.load.image("dinoRun2", dinoRun2);
+      this.load.image("dinoRun3", dinoRun3);
+      this.load.image("dinoRun4", dinoRun4);
+      this.load.image("dinoRun5", dinoRun5);
+      this.load.image("dinoRun6", dinoRun6);
+      this.load.image("dinoRun7", dinoRun7);
+      this.load.image("dinoRun8", dinoRun8);
+
+      this.load.image("dinoWalk1", dinoWalk1);
+      this.load.image("dinoWalk2", dinoWalk2);
+      this.load.image("dinoWalk3", dinoWalk3);
+      this.load.image("dinoWalk4", dinoWalk4);
+      this.load.image("dinoWalk5", dinoWalk5);
+      this.load.image("dinoWalk6", dinoWalk6);
+      this.load.image("dinoWalk7", dinoWalk7);
+      this.load.image("dinoWalk8", dinoWalk8);
+      this.load.image("dinoWalk9", dinoWalk9);
+      this.load.image("dinoWalk10", dinoWalk10);
+
+      this.load.image("dinoJump1", dinoJump1);
+      this.load.image("dinoJump2", dinoJump2);
+      this.load.image("dinoJump3", dinoJump3);
+      this.load.image("dinoJump4", dinoJump4);
+      this.load.image("dinoJump5", dinoJump5);
+
+      this.load.image("dinoDead1", dinoDead1);
+      this.load.image("dinoDead2", dinoDead2);
+      this.load.image("dinoDead3", dinoDead3);
+      this.load.image("dinoDead4", dinoDead4);
+      this.load.image("dinoDead5", dinoDead5);
+      this.load.image("dinoDead6", dinoDead6);
+      this.load.image("dinoDead7", dinoDead7);
+      this.load.image("dinoDead8", dinoDead8);
+      
+      this.load.image("ground", groundImage);
+      this.load.image("cactusSmall", cactusSmallImage);
+      this.load.image("cactusLarge", cactusLargeImage);
+      this.load.image("ptero", pteroImage);
+      
+      // Audio
+      this.load.audio("jumpSfx", jumpSound);
+      this.load.audio("pointSfx", pointSound);
+      this.load.audio("hitSfx", hitSound);
+
+      // Create animations after loading
+      this.load.on('complete', () => {
+        // Create animations
+        this.createAnimations();
+        resolve();
+      });
+
+      // Start loading
+      this.load.start();
+    });
+  }
+
+  createAnimations() {
+    // Create dino run animation
     this.anims.create({
       key: 'dinoRun',
       frames: Array.from({length: 8}, (_, i) => ({ key: `dinoRun${i + 1}` })),
@@ -144,7 +154,7 @@ export default class BootScene extends Phaser.Scene {
       repeat: -1
     });
 
-    // Walk animation
+    // Create dino walk animation
     this.anims.create({
       key: 'dinoWalk',
       frames: Array.from({length: 10}, (_, i) => ({ key: `dinoWalk${i + 1}` })),
@@ -152,7 +162,7 @@ export default class BootScene extends Phaser.Scene {
       repeat: -1
     });
 
-    // Jump animation
+    // Create dino jump animation
     this.anims.create({
       key: 'dinoJump',
       frames: Array.from({length: 12}, (_, i) => ({ key: `dinoJump${i + 1}` })),
@@ -160,15 +170,7 @@ export default class BootScene extends Phaser.Scene {
       repeat: 0
     });
 
-    // Idle animation
-    this.anims.create({
-      key: 'dinoIdle',
-      frames: Array.from({length: 10}, (_, i) => ({ key: `dinoIdle${i + 1}` })),
-      frameRate: 8,
-      repeat: -1
-    });
-
-    // Dead animation
+    // Create dino dead animation
     this.anims.create({
       key: 'dinoDead',
       frames: Array.from({length: 8}, (_, i) => ({ key: `dinoDead${i + 1}` })),

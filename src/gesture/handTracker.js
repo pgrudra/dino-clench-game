@@ -104,15 +104,6 @@ function onResults(results) {
 export function startHandTracking() {
   if (modelReady) return;
   
-  // Create loading spinner
-  const loadingContainer = document.createElement('div');
-  loadingContainer.className = 'loading-container';
-  loadingContainer.innerHTML = `
-    <div class="loading-spinner"></div>
-    <div class="loading-text">Initializing camera...</div>
-  `;
-  document.body.appendChild(loadingContainer);
-  
   // Create or get video element
   let videoElement = document.getElementById("webcamVideo");
   if (!videoElement) {
@@ -156,19 +147,11 @@ export function startHandTracking() {
         camera.start();
         modelReady = true;
         console.log("Hand tracking initialized successfully");
-        // Remove loading spinner
-        loadingContainer.remove();
       };
     })
     .catch((err) => {
       console.warn("Webcam access denied or unavailable.", err);
       modelReady = false;
-      // Update loading text to show error
-      const loadingText = loadingContainer.querySelector('.loading-text');
-      if (loadingText) {
-        loadingText.textContent = "Camera access denied. Please allow camera access to play the game.";
-        loadingText.style.color = "#ff0000";
-      }
     });
 }
 

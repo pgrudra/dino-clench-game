@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { getClenchState, startHandTracking, isModelReady } from "../gesture/handTracker.js";
+import { getClenchState, startHandTracking, isModelReady } from "../gesture/HandTracker.js";
 
 export default class PlayScene extends Phaser.Scene {
   constructor() {
